@@ -1,0 +1,6 @@
+bank
+*.o
+data/accounts.txt
+data/transactions.txt
+data/backup/
+.DS_Store
