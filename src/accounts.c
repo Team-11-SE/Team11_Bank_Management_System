@@ -33,15 +33,20 @@ int acc_valid_name(const char *name)
 
     if (len < 2 || len >= NAME_LEN)
         return 0;
+    if (!isalpha((unsigned char)name[0]) || !isalpha((unsigned char)name[len - 1]))
+        return 0;                        /* no leading or trailing space */
 
     for (i = 0; i < len; i++) {
         if (isalpha((unsigned char)name[i])) {
             letters++;
-        } else if (name[i] != ' ') {
+        } else if (name[i] == ' ') {
+            if (name[i - 1] == ' ' || name[i + 1] == ' ')
+                return 0;                /* no double spaces */
+        } else {
             return 0;
         }
     }
-    return letters >= 1;
+    return letters >= 2;
 }
 
 int acc_valid_amount(double amount)

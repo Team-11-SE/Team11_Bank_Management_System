@@ -11,15 +11,22 @@ int fs_load(struct account *list, int max)
     FILE *fp = fopen(ACC_FILE, "r");
     char line[LINE_LEN];
     int count = 0;
+    int lineno = 0;
 
     if (fp == NULL)
         return 0;                       /* no file yet = empty bank */
 
     while (count < max && fgets(line, sizeof line, fp) != NULL) {
         struct account tmp;
-        if (sscanf(line, "%d,%63[^,],%lf", &tmp.acc_no, tmp.name, &tmp.balance) == 3) {
+        lineno++;
+
+        if (sscanf(line, "%d,%63[^,],%lf", &tmp.acc_no, tmp.name, &tmp.balance) == 3
+            && tmp.acc_no > 0) {
             list[count] = tmp;
             count++;
+        } else {
+            /* damaged record: warn and keep the other accounts (BMS-F-017) */
+            printf("Warning: data/accounts.txt line %d is damaged and was skipped.\n", lineno);
         }
     }
     fclose(fp);
