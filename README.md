@@ -33,6 +33,7 @@ The demo admin password is `admin1234`; only its hash is in the binary.
 make        # build the program -> ./bank
 make run    # build and start the program
 make test   # build and run the smoke test
+make coverage  # unit + CLI tests with gcov line and branch coverage (needs python3)
 make perf   # performance run: 10,000 accounts, 100,000 log lines (needs python3)
 make clean  # remove the binary, the data files and the backups
 ```
@@ -49,7 +50,9 @@ Requires `gcc` (or `cc`) and `make`. Works on macOS and Linux.
 | `src/transactions.c` | deposit, withdraw, balance, statement |
 | `src/filestore.c` | reading and writing the data files |
 | `include/bank.h` | shared struct and function declarations |
-| `tests/` | smoke test |
+| `tests/` | smoke test and coverage test drivers |
+| `tests/unit_tests.c` | unit tests for accounts, transactions and file storage |
+| `tests/coverage.sh` | builds instrumented binaries and generates gcov reports |
 | `tests/perf_test.py` | performance run and evidence generation |
 | `docs/sprint1/` | sprint 1 plan, evidence, deviations, review, demo video |
 | `docs/sprint2/` | sprint 2 plan, performance evidence, RTM, deviations, review |

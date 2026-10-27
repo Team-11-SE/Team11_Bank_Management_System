@@ -16,3 +16,6 @@ jobs:
 
       - name: Run smoke tests
         run: make test
+
+      - name: Run coverage tests
+        run: make coverage

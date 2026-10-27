@@ -5,3 +5,8 @@ data/transactions.txt
 data/backup/
 data/*.tmp
 .DS_Store
+tests/.coverage/
+*.gcov
+*.gcda
+*.gcno
+__pycache__/

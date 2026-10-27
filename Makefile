@@ -17,7 +17,10 @@ test: all
 perf: all
 	python3 tests/perf_test.py
 
-clean:
-	rm -rf $(TARGET) data/accounts.txt data/transactions.txt data/accounts.tmp data/backup
+coverage:
+	bash tests/coverage.sh
 
-.PHONY: all run test perf clean
+clean:
+	rm -rf $(TARGET) data/accounts.txt data/transactions.txt data/accounts.tmp data/backup tests/.coverage
+
+.PHONY: all run test perf coverage clean
