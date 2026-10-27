@@ -1,7 +1,7 @@
 # Sprint 1 review and retrospective
 
 **Delivered:** 11 of 11 items (25 story points), all merged through reviewed pull requests.
-**Demo video:** `docs/sprint1/sprint1-demo.mp4`
+**Demo video:** [docs/sprint1/sprint1-demo.mp4](sprint1-demo.mp4) (58 s, silent)
 **Board:** all Sprint 1 cards are in Done (see the "Current iteration" view).
 
 ## What the demo shows
