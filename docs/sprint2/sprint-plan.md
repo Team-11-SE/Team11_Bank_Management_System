@@ -1,7 +1,7 @@
 # Sprint 2 plan - Team 11 Bank Management System
 
 **Window:** Saturday 7 November 2026 to Wednesday 11 November 2026 (final sprint)
-**Board:** https://github.com/orgs/Team-11-SE/projects/1/views/2
+**Board:** https://github.com/orgs/Team-11-SE/projects/1/views/1 (Current iteration view)
 **Goal:** deliver v1.0: PIN login and hashed PINs, lockout and admin unlock,
 change PIN, deposit/withdrawal limits, admin menu, backups, integrity check,
 atomic writes, date-range statement, performance evidence, final documents and
