@@ -1,7 +1,10 @@
+#define _POSIX_C_SOURCE 200809L
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
+#include <unistd.h>
 #include "bank.h"
 
 /* Reads a whole number. Returns 0 when the input ends (so the menu exits). */
@@ -67,84 +70,187 @@ static void read_name(const char *prompt, char *out, int size)
     }
 }
 
-static void show_menu(void)
+/* Reads a secret without echo when stdin is a terminal (SAD 4.3.7). */
+static void read_pin(const char *prompt, char *out, int size)
 {
-    printf("1. Create account\n");
-    printf("2. Deposit\n");
-    printf("3. Withdraw\n");
-    printf("4. Balance inquiry\n");
-    printf("5. Mini statement (last 10 transactions)\n");
+    struct termios oldt;
+    struct termios newt;
+    int tty = isatty(STDIN_FILENO);
+    int echo_off = 0;
+    size_t len;
+
+    out[0] = '\0';
+    printf("%s", prompt);
+    fflush(stdout);
+
+    if (tty && tcgetattr(STDIN_FILENO, &oldt) == 0) {
+        newt = oldt;
+        newt.c_lflag &= ~(tcflag_t)ECHO;
+        if (tcsetattr(STDIN_FILENO, TCSANOW, &newt) == 0)
+            echo_off = 1;
+    }
+
+    if (fgets(out, size, stdin) == NULL)
+        out[0] = '\0';
+
+    if (echo_off) {
+        tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+        printf("\n");
+    }
+
+    len = strlen(out);
+    while (len > 0 && (out[len - 1] == '\n' || out[len - 1] == '\r'))
+        out[--len] = '\0';
+}
+
+static void show_main_menu(void)
+{
+    printf("1. Customer login\n");
+    printf("2. Create account\n");
     printf("0. Exit\n");
+}
+
+static void show_customer_menu(void)
+{
+    printf("1. Deposit\n");
+    printf("2. Withdraw\n");
+    printf("3. Balance inquiry\n");
+    printf("4. Mini statement (last 10 transactions)\n");
+    printf("0. Logout\n");
+}
+
+/* Asks for the account number and PIN. Returns 1 when the login succeeded. */
+static int customer_login(struct account *list, int count, int *idx_out)
+{
+    int acc_no = read_int("Account number: ");
+    char pin[64];
+    int rc;
+
+    read_pin("PIN: ", pin, sizeof pin);
+    rc = auth_login(list, count, acc_no, pin, idx_out);
+
+    if (rc == 0) {
+        printf("Login successful. Welcome, %s.\n\n", list[*idx_out].name);
+    } else if (rc == 1) {
+        printf("Account %d not found.\n\n", acc_no);
+    } else {
+        printf("Wrong PIN.\n\n");
+    }
+    return rc == 0;
+}
+
+static void create_account_flow(struct account *list, int *count)
+{
+    char name[NAME_LEN];
+    char pin[64];
+    char confirm[64];
+    double opening;
+    int new_no;
+
+    read_name("Name: ", name, NAME_LEN);
+    opening = read_amount("Opening balance: ");
+
+    for (;;) {
+        read_pin("New PIN (4 digits): ", pin, sizeof pin);
+        if (!auth_valid_pin(pin)) {
+            printf("PIN must be exactly 4 digits.\n");
+            continue;
+        }
+        read_pin("Confirm PIN: ", confirm, sizeof confirm);
+        if (strcmp(pin, confirm) != 0) {
+            printf("PINs do not match. Try again.\n");
+            continue;
+        }
+        break;
+    }
+
+    new_no = acc_create(list, count, name, opening, pin);
+    if (new_no > 0) {
+        printf("Account created. Your account number is %d.\n", new_no);
+    } else if (new_no == -1) {
+        printf("Invalid name. Use letters and spaces only, at least 2 characters.\n");
+    } else if (new_no == -2) {
+        printf("Invalid opening balance. It must be 0 or more with at most 2 decimals.\n");
+    } else if (new_no == -3) {
+        printf("Account list is full (%d accounts).\n", MAX_ACCOUNTS);
+    } else if (new_no == -5) {
+        printf("PIN must be exactly 4 digits.\n");
+    } else {
+        printf("Could not save the account to disk.\n");
+    }
+}
+
+/* Runs the logged-in customer menu until logout (0). */
+static void customer_session(struct account *list, int count, int idx)
+{
+    int acc_no = list[idx].acc_no;
+    int choice;
+
+    for (;;) {
+        show_customer_menu();
+        choice = read_int("Enter choice: ");
+        printf("\n");
+
+        if (choice == 0) {
+            printf("Logged out.\n\n");
+            return;
+        } else if (choice == 1) {
+            double amount = read_amount("Deposit amount: ");
+            int rc = txn_deposit(list, count, acc_no, amount);
+
+            if (rc == 0)
+                printf("Deposited %.2f. New balance: %.2f\n", amount, list[idx].balance);
+            else if (rc == 1)
+                printf("Account %d not found.\n", acc_no);
+            else
+                printf("Deposit could not be completed (code %d).\n", rc);
+        } else if (choice == 2) {
+            double amount = read_amount("Withdrawal amount: ");
+            int rc = txn_withdraw(list, count, acc_no, amount);
+
+            if (rc == 0)
+                printf("Withdrew %.2f. New balance: %.2f\n", amount, list[idx].balance);
+            else if (rc == 1)
+                printf("Account %d not found.\n", acc_no);
+            else if (rc == 3)
+                printf("Insufficient balance. Available: %.2f\n", list[idx].balance);
+            else
+                printf("Withdrawal could not be completed (code %d).\n", rc);
+        } else if (choice == 3) {
+            txn_balance(list, count, acc_no);
+        } else if (choice == 4) {
+            txn_print_last(acc_no, 10);
+        } else {
+            printf("Unknown option. Please choose between 0 and 4.\n");
+        }
+        printf("\n");
+    }
 }
 
 void menu_run(void)
 {
-    struct account list[MAX_ACCOUNTS];
+    static struct account list[MAX_ACCOUNTS];
     int count = fs_load(list, MAX_ACCOUNTS);
     int choice;
 
     printf("Loaded %d account(s) from data/accounts.txt.\n\n", count);
 
     for (;;) {
-        show_menu();
+        show_main_menu();
         choice = read_int("Enter choice: ");
         printf("\n");
 
         if (choice == 0) {
             break;
         } else if (choice == 1) {
-            char name[NAME_LEN];
-            double opening;
-            int new_no;
+            int idx = -1;
 
-            read_name("Name: ", name, NAME_LEN);
-            opening = read_amount("Opening balance: ");
-            new_no = acc_create(list, &count, name, opening);
-            if (new_no > 0) {
-                printf("Account created. Your account number is %d.\n", new_no);
-            } else if (new_no == -1) {
-                printf("Invalid name. Use letters and spaces only, at least 2 characters.\n");
-            } else if (new_no == -2) {
-                printf("Invalid opening balance. It must be 0 or more with at most 2 decimals.\n");
-            } else if (new_no == -3) {
-                printf("Account list is full (%d accounts).\n", MAX_ACCOUNTS);
-            } else {
-                printf("Could not save the account to disk.\n");
-            }
+            if (customer_login(list, count, &idx))
+                customer_session(list, count, idx);
         } else if (choice == 2) {
-            int acc_no = read_int("Account number: ");
-            double amount = read_amount("Deposit amount: ");
-            int rc = txn_deposit(list, count, acc_no, amount);
-            int idx = acc_find(list, count, acc_no);
-
-            if (rc == 0 && idx >= 0)
-                printf("Deposited %.2f. New balance: %.2f\n", amount, list[idx].balance);
-            else if (rc == 1)
-                printf("Account %d not found.\n", acc_no);
-            else
-                printf("Deposit could not be completed (code %d).\n", rc);
-        } else if (choice == 3) {
-            int acc_no = read_int("Account number: ");
-            double amount = read_amount("Withdrawal amount: ");
-            int rc = txn_withdraw(list, count, acc_no, amount);
-            int idx = acc_find(list, count, acc_no);
-
-            if (rc == 0 && idx >= 0)
-                printf("Withdrew %.2f. New balance: %.2f\n", amount, list[idx].balance);
-            else if (rc == 1)
-                printf("Account %d not found.\n", acc_no);
-            else if (rc == 3 && idx >= 0)
-                printf("Insufficient balance. Available: %.2f\n", list[idx].balance);
-            else
-                printf("Withdrawal could not be completed (code %d).\n", rc);
-        } else if (choice == 4) {
-            int acc_no = read_int("Account number: ");
-            txn_balance(list, count, acc_no);
-        } else if (choice == 5) {
-            int acc_no = read_int("Account number: ");
-            txn_print_last(acc_no, 10);
+            create_account_flow(list, &count);
         } else {
-            printf("Unknown option. Please choose between 0 and 5.\n");
+            printf("Unknown option. Please choose between 0 and 2.\n");
         }
         printf("\n");
     }

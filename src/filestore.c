@@ -20,8 +20,9 @@ int fs_load(struct account *list, int max)
         struct account tmp;
         lineno++;
 
-        if (sscanf(line, "%d,%63[^,],%lf", &tmp.acc_no, tmp.name, &tmp.balance) == 3
-            && tmp.acc_no > 0) {
+        if (sscanf(line, "%d,%63[^,],%16[^,],%lf",
+                   &tmp.acc_no, tmp.name, tmp.pin_hash, &tmp.balance) == 4
+            && tmp.acc_no > 0 && strlen(tmp.pin_hash) == 16) {
             list[count] = tmp;
             count++;
         } else {
@@ -41,7 +42,8 @@ int fs_save(const struct account *list, int count)
     if (fp == NULL)
         return 1;
     for (i = 0; i < count; i++)
-        fprintf(fp, "%d,%s,%.2f\n", list[i].acc_no, list[i].name, list[i].balance);
+        fprintf(fp, "%d,%s,%s,%.2f\n", list[i].acc_no, list[i].name,
+                list[i].pin_hash, list[i].balance);
     fclose(fp);
     return 0;
 }

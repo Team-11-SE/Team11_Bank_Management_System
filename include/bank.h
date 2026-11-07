@@ -4,10 +4,13 @@
 #define MAX_ACCOUNTS 100
 #define NAME_LEN 64
 #define LINE_LEN 256
+#define PIN_LEN 5
+#define HASH_LEN 17
 
 struct account {
     int acc_no;
     char name[NAME_LEN];
+    char pin_hash[HASH_LEN];
     double balance;
 };
 
@@ -16,14 +19,18 @@ int fs_load(struct account *list, int max);                 /* returns number of
 int fs_save(const struct account *list, int count);         /* 0 = ok, 1 = file error */
 int fs_log_txn(int acc_no, const char *type, double amount, double balance_after); /* 0 = ok, 1 = error */
 
-/* ---- accounts.c : account list handling ---- */
+/* ---- accounts.c : account list handling and PIN authentication ---- */
 int acc_find(const struct account *list, int count, int acc_no);    /* index, or -1 if not found */
 int acc_next_number(const struct account *list, int count);         /* 1001 for the first account, then highest + 1 */
 int acc_valid_name(const char *name);                               /* 1 = ok, 0 = bad */
 int acc_valid_amount(double amount);                                /* 1 = ok, 0 = bad (must be > 0, max 2 decimals) */
+void auth_hash(const char *text, char out[HASH_LEN]);               /* hex hash of text (PIN, admin password) */
+int auth_valid_pin(const char *pin);                                /* 1 = exactly 4 digits */
+/* return codes: 0 = ok, 1 = account not found, 2 = wrong PIN or bad PIN format */
+int auth_login(struct account *list, int count, int acc_no, const char *pin, int *idx_out);
 /* returns the new account number, or:
-   -1 bad name, -2 bad opening balance, -3 account list full, -4 save failed */
-int acc_create(struct account *list, int *count, const char *name, double opening);
+   -1 bad name, -2 bad opening balance, -3 account list full, -4 save failed, -5 bad PIN */
+int acc_create(struct account *list, int *count, const char *name, double opening, const char *pin);
 
 /* ---- transactions.c : money operations ---- */
 /* return codes: 0 = ok, 1 = account not found, 2 = invalid amount,

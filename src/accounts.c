@@ -64,7 +64,51 @@ int acc_valid_amount(double amount)
     return diff < 0.000001 && diff > -0.000001;   /* at most 2 decimal places */
 }
 
-int acc_create(struct account *list, int *count, const char *name, double opening)
+/* FNV-1a: a small, deterministic hash. Only the hash is stored (PRJ-SR-001). */
+void auth_hash(const char *text, char out[HASH_LEN])
+{
+    unsigned long long h = 1469598103934665603ULL;
+    const unsigned char *p = (const unsigned char *)text;
+
+    while (*p != '\0') {
+        h ^= (unsigned long long)*p++;
+        h *= 1099511628211ULL;
+    }
+    snprintf(out, HASH_LEN, "%016llx", h);
+}
+
+int auth_valid_pin(const char *pin)
+{
+    size_t i;
+
+    if (strlen(pin) != 4)
+        return 0;
+    for (i = 0; i < 4; i++) {
+        if (!isdigit((unsigned char)pin[i]))
+            return 0;
+    }
+    return 1;
+}
+
+int auth_login(struct account *list, int count, int acc_no, const char *pin, int *idx_out)
+{
+    int idx = acc_find(list, count, acc_no);
+    char hash[HASH_LEN];
+
+    if (idx < 0)
+        return 1;
+    if (!auth_valid_pin(pin))
+        return 2;
+    auth_hash(pin, hash);
+    if (strcmp(hash, list[idx].pin_hash) != 0)
+        return 2;
+
+    *idx_out = idx;
+    return 0;
+}
+
+int acc_create(struct account *list, int *count, const char *name, double opening,
+               const char *pin)
 {
     int new_no;
 
@@ -72,12 +116,15 @@ int acc_create(struct account *list, int *count, const char *name, double openin
         return -1;
     if (!(opening == 0.0 || acc_valid_amount(opening)))
         return -2;
+    if (!auth_valid_pin(pin))
+        return -5;
     if (*count >= MAX_ACCOUNTS)
         return -3;
 
     new_no = acc_next_number(list, *count);
     list[*count].acc_no = new_no;
     snprintf(list[*count].name, NAME_LEN, "%s", name);
+    auth_hash(pin, list[*count].pin_hash);
     list[*count].balance = opening;
     (*count)++;
 
