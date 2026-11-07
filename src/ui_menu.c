@@ -126,15 +126,29 @@ static int customer_login(struct account *list, int count, int *idx_out)
     char pin[64];
     int rc;
 
+    *idx_out = -1;
     read_pin("PIN: ", pin, sizeof pin);
-    rc = auth_login(list, count, acc_no, pin, idx_out);
+    if (!auth_valid_pin(pin)) {
+        printf("PIN must be exactly 4 digits.\n\n");
+        return 0;
+    }
 
+    rc = auth_login(list, count, acc_no, pin, idx_out);
     if (rc == 0) {
         printf("Login successful. Welcome, %s.\n\n", list[*idx_out].name);
     } else if (rc == 1) {
         printf("Account %d not found.\n\n", acc_no);
+    } else if (rc == 2) {
+        if (*idx_out >= 0 && strcmp(list[*idx_out].status, "LOCKED") == 0)
+            printf("Wrong PIN. Account is LOCKED after 3 failed attempts.\n\n");
+        else
+            printf("Wrong PIN. Attempt %d of 3.\n\n", list[*idx_out].bad_tries);
+    } else if (rc == 3) {
+        printf("Account is LOCKED. Contact the bank admin.\n\n");
+    } else if (rc == 4) {
+        printf("Account is CLOSED.\n\n");
     } else {
-        printf("Wrong PIN.\n\n");
+        printf("Could not save the failed attempt.\n\n");
     }
     return rc == 0;
 }
@@ -202,6 +216,8 @@ static void customer_session(struct account *list, int count, int idx)
                 printf("Deposited %.2f. New balance: %.2f\n", amount, list[idx].balance);
             else if (rc == 1)
                 printf("Account %d not found.\n", acc_no);
+            else if (rc == 6)
+                printf("Account is not active.\n");
             else
                 printf("Deposit could not be completed (code %d).\n", rc);
         } else if (choice == 2) {
@@ -214,6 +230,8 @@ static void customer_session(struct account *list, int count, int idx)
                 printf("Account %d not found.\n", acc_no);
             else if (rc == 3)
                 printf("Insufficient balance. Available: %.2f\n", list[idx].balance);
+            else if (rc == 6)
+                printf("Account is not active.\n");
             else
                 printf("Withdrawal could not be completed (code %d).\n", rc);
         } else if (choice == 3) {

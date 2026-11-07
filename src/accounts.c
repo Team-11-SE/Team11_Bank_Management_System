@@ -97,11 +97,23 @@ int auth_login(struct account *list, int count, int acc_no, const char *pin, int
 
     if (idx < 0)
         return 1;
+    if (strcmp(list[idx].status, "LOCKED") == 0)
+        return 3;
+    if (strcmp(list[idx].status, "CLOSED") == 0)
+        return 4;
     if (!auth_valid_pin(pin))
         return 2;
+
     auth_hash(pin, hash);
-    if (strcmp(hash, list[idx].pin_hash) != 0)
+    if (strcmp(hash, list[idx].pin_hash) != 0) {
+        list[idx].bad_tries++;
+        if (list[idx].bad_tries >= 3)
+            snprintf(list[idx].status, STATUS_LEN, "LOCKED");
+        *idx_out = idx;
+        if (fs_save(list, count) != 0)
+            return 5;
         return 2;
+    }
 
     *idx_out = idx;
     return 0;
@@ -126,6 +138,8 @@ int acc_create(struct account *list, int *count, const char *name, double openin
     snprintf(list[*count].name, NAME_LEN, "%s", name);
     auth_hash(pin, list[*count].pin_hash);
     list[*count].balance = opening;
+    snprintf(list[*count].status, STATUS_LEN, "ACTIVE");
+    list[*count].bad_tries = 0;
     (*count)++;
 
     if (fs_save(list, *count) != 0)
