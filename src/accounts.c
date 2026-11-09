@@ -57,8 +57,8 @@ int acc_valid_amount(double amount)
     long long whole;
     double diff;
 
-    if (amount <= 0.0 || amount > 100000000.0)
-        return 0;
+    if (amount <= 0.0 || amount >= AMOUNT_CEILING)
+        return 0;   /* PRJ-SR-007 */
 
     cents = amount * 100.0;
     whole = (long long)(cents + 0.5);

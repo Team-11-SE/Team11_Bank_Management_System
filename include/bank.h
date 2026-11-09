@@ -10,6 +10,8 @@
 #define STATUS_LEN 8
 #define MIN_BALANCE 500.00
 #define DAILY_WITHDRAW_LIMIT 50000.00
+#define DEPOSIT_LIMIT 200000.00
+#define AMOUNT_CEILING 10000000.00
 
 struct account {
     int acc_no;
@@ -38,7 +40,7 @@ int auth_valid_pin_policy(const char *pin);
 
 /* return codes: 0 = ok, 1 = account not found, 2 = invalid amount,
    3 = insufficient balance, 4 = save failed, 5 = daily limit would be crossed,
-   6 = account not active */
+   6 = account not active, 7 = deposit limit exceeded */
 int auth_login(struct account *list, int count, int acc_no,
                const char *pin, int *idx_out);
 
@@ -55,7 +57,8 @@ int acc_create(struct account *list, int *count, const char *name,
 
 /* ---- transactions.c ---- */
 /* return codes: 0 = ok, 1 = account not found, 2 = invalid amount,
-   3 = insufficient balance, 4 = save failed, 6 = account not active */
+   3 = insufficient balance, 4 = save failed, 6 = account not active,
+   7 = deposit limit exceeded */
 int txn_deposit(struct account *list, int count, int acc_no, double amount);
 int txn_withdraw(struct account *list, int count, int acc_no, double amount);
 void txn_balance(const struct account *list, int count, int acc_no);

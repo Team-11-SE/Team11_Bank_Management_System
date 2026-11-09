@@ -96,7 +96,6 @@ fi
 
 echo
 echo "== data still there after a restart =="
-echo
 echo "== minimum balance and daily withdrawal limit (S2-04) =="
 OUT=$(printf '1\n1001\n4829\n2\n7000\n0\n0\n' | ./bank)
 check "Insufficient balance. Minimum balance Rs. 500.00 must remain. Available: 5000.00" \
@@ -129,6 +128,21 @@ OUT=$(printf '1\n1001\n4829\n0\n' | ./bank)
 check "Wrong PIN" "the old PIN no longer works"
 
 secret_check "7391" "new PIN is not stored in plain text"
+
+echo
+echo "== deposit limit and amount bounds (S2-05) =="
+OUT=$(printf '1\n1001\n7391\n1\n200000\n1\n200001\n0\n0\n' | ./bank)
+check "Deposited 200000.00. New balance: 205500.00" "deposit at the limit is accepted"
+check "Deposit limit is Rs. 200000.00 per deposit." "deposit above the limit is refused"
+OUT=$(printf '1\n1001\n7391\n1\n0\n-5\n10000000\nabc\n100\n0\n0\n' | ./bank)
+check "10000000.00" "the upper bound is shown in the message"
+n=$(printf '%s\n' "$OUT" | grep -c "Invalid amount")
+if [ "$n" -ge 4 ]; then
+    echo "PASS: 0, -5, 10000000 and abc are all refused"
+else
+    echo "FAIL: invalid amounts refused (only $n messages)"
+    fail=1
+fi
 
 echo
 if [ "$fail" -eq 0 ]; then

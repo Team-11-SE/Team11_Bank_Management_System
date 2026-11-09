@@ -27,6 +27,8 @@ int txn_deposit(struct account *list, int count, int acc_no, double amount)
         return 2;
     if (strcmp(list[idx].status, "ACTIVE") != 0)
         return 6;
+    if (amount > DEPOSIT_LIMIT)
+        return 7;
 
     list[idx].balance += amount;
     return save_and_log(list, count, idx, "DEPOSIT", amount);
@@ -43,9 +45,9 @@ int txn_withdraw(struct account *list, int count, int acc_no, double amount)
     if (strcmp(list[idx].status, "ACTIVE") != 0)
         return 6;
     if (amount > list[idx].balance - MIN_BALANCE)
-    return 3;
+        return 3;
     if (txn_withdrawn_today(acc_no) + amount > DAILY_WITHDRAW_LIMIT)
-    return 5;
+        return 5;
 
     list[idx].balance -= amount;
     return save_and_log(list, count, idx, "WITHDRAW", amount);
@@ -130,7 +132,7 @@ double txn_withdrawn_today(int acc_no)
         char type[16];
         double amount;
 
-        if (sscanf(line, "%*d,%d,%15[^,],%lf,%*lf,%31[^\n]",
+        if (sscanf(line, "%*d,%d,%15[^,],%lf,%*[^,],%31[^\n]",
                    &acc, type, &amount, when) == 4
             && acc == acc_no && strcmp(type, "WITHDRAW") == 0
             && strncmp(when, today, 10) == 0)
