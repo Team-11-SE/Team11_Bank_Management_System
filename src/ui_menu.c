@@ -1,4 +1,3 @@
-
 #define _POSIX_C_SOURCE 200809L
 #include <ctype.h>
 #include <stdio.h>
@@ -117,7 +116,6 @@ static void show_customer_menu(void)
     printf("2. Withdraw\n");
     printf("3. Balance inquiry\n");
     printf("4. Mini statement (last 10 transactions)\n");
-    printf("5. Change PIN\n");
     printf("0. Logout\n");
 }
 
@@ -172,10 +170,6 @@ static void create_account_flow(struct account *list, int *count)
             printf("PIN must be exactly 4 digits.\n");
             continue;
         }
-        if (!auth_valid_pin_policy(pin)) {
-            printf("Weak PIN. Do not use 0000, 1111, 1234 or 4321.\n");
-            continue;
-        }
         read_pin("Confirm PIN: ", confirm, sizeof confirm);
         if (strcmp(pin, confirm) != 0) {
             printf("PINs do not match. Try again.\n");
@@ -198,47 +192,6 @@ static void create_account_flow(struct account *list, int *count)
     } else {
         printf("Could not save the account to disk.\n");
     }
-}
-
-/* Changes the PIN after checking the old PIN and the weak-PIN policy (S2-03). */
-static void change_pin_flow(struct account *list, int count, int idx)
-{
-    char old_pin[64];
-    char new_pin[64];
-    char confirm[64];
-    int rc;
-
-    read_pin("Old PIN: ", old_pin, sizeof old_pin);
-    if (!auth_valid_pin(old_pin)) {
-        printf("PIN must be exactly 4 digits.\n");
-        return;
-    }
-
-    read_pin("New PIN (4 digits): ", new_pin, sizeof new_pin);
-    if (!auth_valid_pin(new_pin)) {
-        printf("PIN must be exactly 4 digits.\n");
-        return;
-    }
-    if (!auth_valid_pin_policy(new_pin)) {
-        printf("Weak PIN. Do not use 0000, 1111, 1234 or 4321.\n");
-        return;
-    }
-
-    read_pin("Confirm new PIN: ", confirm, sizeof confirm);
-    if (strcmp(new_pin, confirm) != 0) {
-        printf("PINs do not match. PIN not changed.\n");
-        return;
-    }
-
-    rc = acc_change_pin(list, count, idx, old_pin, new_pin);
-    if (rc == 0)
-        printf("PIN changed.\n");
-    else if (rc == 1)
-        printf("Wrong old PIN. PIN not changed.\n");
-    else if (rc == 2)
-        printf("Weak PIN. Do not use 0000, 1111, 1234 or 4321.\n");
-    else
-        printf("Could not save the new PIN.\n");
 }
 
 /* Runs the logged-in customer menu until logout (0). */
@@ -285,10 +238,8 @@ static void customer_session(struct account *list, int count, int idx)
             txn_balance(list, count, acc_no);
         } else if (choice == 4) {
             txn_print_last(acc_no, 10);
-        } else if (choice == 5) {
-            change_pin_flow(list, count, idx);
         } else {
-            printf("Unknown option. Please choose between 0 and 5.\n");
+            printf("Unknown option. Please choose between 0 and 4.\n");
         }
         printf("\n");
     }
