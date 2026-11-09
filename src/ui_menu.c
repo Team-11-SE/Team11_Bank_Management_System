@@ -44,7 +44,7 @@ static double read_amount(const char *prompt)
             end++;
         if (end != line && *end == '\0' && acc_valid_amount(value))
             return value;
-        printf("Invalid amount. Enter a number greater than 0 with at most 2 decimals.\n");
+        printf("Invalid amount. Enter a number greater than 0 and below Rs. 10000000.00 with at most 2 decimals.\n");
     }
 }
 
@@ -286,6 +286,8 @@ static void customer_session(struct account *list, int count, int idx)
            DAILY_WITHDRAW_LIMIT - txn_withdrawn_today(acc_no));
             else if (rc == 6)
                 printf("Account is not active.\n");
+                else if (rc == 7)
+    printf("Deposit limit is Rs. 200000.00 per deposit.\n");
             else
                 printf("Withdrawal could not be completed (code %d).\n", rc);
         } else if (choice == 3) {
