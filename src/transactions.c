@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "bank.h"
+#include <time.h>
 
 /* Return codes: 0 = ok, 1 = account not found, 2 = invalid amount,
    3 = insufficient balance, 4 = save failed. */
@@ -41,8 +42,10 @@ int txn_withdraw(struct account *list, int count, int acc_no, double amount)
         return 2;
     if (strcmp(list[idx].status, "ACTIVE") != 0)
         return 6;
-    if (amount > list[idx].balance)
-        return 3;
+    if (amount > list[idx].balance - MIN_BALANCE)
+    return 3;
+    if (txn_withdrawn_today(acc_no) + amount > DAILY_WITHDRAW_LIMIT)
+    return 5;
 
     list[idx].balance -= amount;
     return save_and_log(list, count, idx, "WITHDRAW", amount);
@@ -103,4 +106,36 @@ void txn_print_last(int acc_no, int last_n)
         l[strcspn(l, "\n")] = '\0';
         printf("%s\n", l);
     }
+}
+/* Sum of today's WITHDRAW lines for one account (BMS-F-007). */
+double txn_withdrawn_today(int acc_no)
+{
+    FILE *fp = fopen("data/transactions.txt", "r");
+    char line[LINE_LEN];
+    char when[32];
+    char today[11];
+    time_t now;
+    struct tm *tm_info;
+    double sum = 0.0;
+
+    if (fp == NULL)
+        return 0.0;
+
+    now = time(NULL);
+    tm_info = localtime(&now);
+    strftime(today, sizeof today, "%Y-%m-%d", tm_info);
+
+    while (fgets(line, sizeof line, fp) != NULL) {
+        int acc;
+        char type[16];
+        double amount;
+
+        if (sscanf(line, "%*d,%d,%15[^,],%lf,%*lf,%31[^\n]",
+                   &acc, type, &amount, when) == 4
+            && acc == acc_no && strcmp(type, "WITHDRAW") == 0
+            && strncmp(when, today, 10) == 0)
+            sum += amount;
+    }
+    fclose(fp);
+    return sum;
 }

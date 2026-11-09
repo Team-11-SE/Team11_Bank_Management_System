@@ -96,6 +96,16 @@ fi
 
 echo
 echo "== data still there after a restart =="
+echo
+echo "== minimum balance and daily withdrawal limit (S2-04) =="
+OUT=$(printf '1\n1001\n4829\n2\n7000\n0\n0\n' | ./bank)
+check "Insufficient balance. Minimum balance Rs. 500.00 must remain. Available: 5000.00" \
+      "withdraw that would break the minimum balance is refused"
+
+OUT=$(printf '2\nCarol\n60000\n2468\n2468\n1\n1003\n2468\n2\n50000\n2\n1\n0\n0\n' | ./bank)
+check "Withdrew 50000.00. New balance: 10000.00" "withdraw up to the daily limit works"
+check "Daily withdrawal limit Rs. 50000.00 reached. Remaining today: 0.00" \
+      "withdraw above the daily limit is refused"
 OUT=$(printf '1\n1001\n4829\n3\n0\n0\n' | ./bank)
 check "Balance for account 1001 (Asha): 5500.00" "balance after restart"
 
