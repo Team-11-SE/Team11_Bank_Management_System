@@ -164,10 +164,16 @@ static void create_account_flow(struct account *list, int *count)
     int new_no;
 
     read_name("Name: ", name, NAME_LEN);
+    if (name[0] == '\0')
+        return;                         /* EOF: do not hang in the PIN loop */
     opening = read_amount("Opening balance: ");
+    if (opening < 0.0)
+        return;                         /* EOF */
 
     for (;;) {
         read_pin("New PIN (4 digits): ", pin, sizeof pin);
+        if (pin[0] == '\0')
+            return;                     /* EOF */
         if (!auth_valid_pin(pin)) {
             printf("PIN must be exactly 4 digits.\n");
             continue;
@@ -177,6 +183,8 @@ static void create_account_flow(struct account *list, int *count)
             continue;
         }
         read_pin("Confirm PIN: ", confirm, sizeof confirm);
+        if (confirm[0] == '\0')
+            return;                     /* EOF */
         if (strcmp(pin, confirm) != 0) {
             printf("PINs do not match. Try again.\n");
             continue;
@@ -265,6 +273,8 @@ static void customer_session(struct account *list, int count, int idx)
                 printf("Account %d not found.\n", acc_no);
             else if (rc == 6)
                 printf("Account is not active.\n");
+            else if (rc == 7)
+                printf("Deposit limit is Rs. 200000.00 per deposit.\n");
             else
                 printf("Deposit could not be completed (code %d).\n", rc);
         } else if (choice == 2) {
@@ -276,20 +286,20 @@ static void customer_session(struct account *list, int count, int idx)
             else if (rc == 1)
                 printf("Account %d not found.\n", acc_no);
             else if (rc == 3) {
- double available = list[idx].balance - MIN_BALANCE;
-    if (available < 0.0)
-        available = 0.0;
-    printf("Insufficient balance. Minimum balance Rs. 500.00 must remain. Available: %.2f\n",
-           available);
-} else if (rc == 5)
-    printf("Daily withdrawal limit Rs. 50000.00 reached. Remaining today: %.2f\n",
-           DAILY_WITHDRAW_LIMIT - txn_withdrawn_today(acc_no));
-            else if (rc == 6)
+                double available = list[idx].balance - MIN_BALANCE;
+
+                if (available < 0.0)
+                    available = 0.0;
+                printf("Insufficient balance. Minimum balance Rs. 500.00 must remain. Available: %.2f\n",
+                       available);
+            } else if (rc == 5) {
+                printf("Daily withdrawal limit Rs. 50000.00 reached. Remaining today: %.2f\n",
+                       DAILY_WITHDRAW_LIMIT - txn_withdrawn_today(acc_no));
+            } else if (rc == 6) {
                 printf("Account is not active.\n");
-                else if (rc == 7)
-    printf("Deposit limit is Rs. 200000.00 per deposit.\n");
-            else
+            } else {
                 printf("Withdrawal could not be completed (code %d).\n", rc);
+            }
         } else if (choice == 3) {
             txn_balance(list, count, acc_no);
         } else if (choice == 4) {
