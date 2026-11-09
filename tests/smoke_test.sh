@@ -1,6 +1,7 @@
+
 #!/usr/bin/env bash
 # Smoke test for the Team 11 Bank program (Sprint 2).
-# Run from the repo root with:  make test   (or: bash tests/smoke_test.sh)
+# Run from the repo root with: make test (or: bash tests/smoke_test.sh)
 set -u
 
 cd "$(dirname "$0")/.."
@@ -104,6 +105,20 @@ file_check "1001,Asha" data/accounts.txt "accounts.txt has the saved account"
 file_check "DEPOSIT,1500.00" data/transactions.txt "transactions.txt has the deposit"
 file_check "WITHDRAW,1000.00" data/transactions.txt "transactions.txt has the withdrawal"
 secret_check "4829" "PIN is never stored in plain text"
+
+echo
+echo "== change PIN, weak-PIN policy (S2-03) =="
+OUT=$(printf '1\n1001\n4829\n5\n4829\n7391\n7391\n5\n7391\n1111\n0\n0\n' | ./bank)
+check "PIN changed" "PIN changed with the old PIN"
+check "Weak PIN. Do not use 0000, 1111, 1234 or 4321." "weak PIN refused"
+
+OUT=$(printf '1\n1001\n7391\n3\n0\n0\n' | ./bank)
+check "Balance for account 1001 (Asha): 5500.00" "the new PIN works"
+
+OUT=$(printf '1\n1001\n4829\n0\n' | ./bank)
+check "Wrong PIN" "the old PIN no longer works"
+
+secret_check "7391" "new PIN is not stored in plain text"
 
 echo
 if [ "$fail" -eq 0 ]; then
