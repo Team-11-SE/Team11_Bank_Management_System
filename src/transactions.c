@@ -27,6 +27,8 @@ int txn_deposit(struct account *list, int count, int acc_no, double amount)
         return 2;
     if (strcmp(list[idx].status, "ACTIVE") != 0)
         return 6;
+    if (amount > DEPOSIT_LIMIT)
+    return 7;
 
     list[idx].balance += amount;
     return save_and_log(list, count, idx, "DEPOSIT", amount);
