@@ -275,8 +275,15 @@ static void customer_session(struct account *list, int count, int idx)
                 printf("Withdrew %.2f. New balance: %.2f\n", amount, list[idx].balance);
             else if (rc == 1)
                 printf("Account %d not found.\n", acc_no);
-            else if (rc == 3)
-                printf("Insufficient balance. Available: %.2f\n", list[idx].balance);
+            else if (rc == 3) {
+ double available = list[idx].balance - MIN_BALANCE;
+    if (available < 0.0)
+        available = 0.0;
+    printf("Insufficient balance. Minimum balance Rs. 500.00 must remain. Available: %.2f\n",
+           available);
+} else if (rc == 5)
+    printf("Daily withdrawal limit Rs. 50000.00 reached. Remaining today: %.2f\n",
+           DAILY_WITHDRAW_LIMIT - txn_withdrawn_today(acc_no));
             else if (rc == 6)
                 printf("Account is not active.\n");
             else
