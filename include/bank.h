@@ -8,6 +8,8 @@
 #define PIN_LEN 5
 #define HASH_LEN 17
 #define STATUS_LEN 8
+#define MIN_BALANCE 500.00
+#define DAILY_WITHDRAW_LIMIT 50000.00
 
 struct account {
     int acc_no;
@@ -34,8 +36,9 @@ void auth_hash(const char *text, char out[HASH_LEN]);
 int auth_valid_pin(const char *pin);
 int auth_valid_pin_policy(const char *pin);
 
-/* return codes: 0 = ok, 1 = account not found, 2 = wrong PIN (counted),
-   3 = account LOCKED, 4 = account CLOSED, 5 = could not save failed attempt */
+/* return codes: 0 = ok, 1 = account not found, 2 = invalid amount,
+   3 = insufficient balance, 4 = save failed, 5 = daily limit would be crossed,
+   6 = account not active */
 int auth_login(struct account *list, int count, int acc_no,
                const char *pin, int *idx_out);
 
@@ -57,6 +60,7 @@ int txn_deposit(struct account *list, int count, int acc_no, double amount);
 int txn_withdraw(struct account *list, int count, int acc_no, double amount);
 void txn_balance(const struct account *list, int count, int acc_no);
 void txn_print_last(int acc_no, int last_n);
+double txn_withdrawn_today(int acc_no);
 
 /* ---- ui_menu.c ---- */
 void menu_run(void);
