@@ -48,7 +48,7 @@ echo
 echo "== create an account with a 4-digit PIN =="
 OUT=$(printf '2\nAsha\n5000\n4829\n4829\n0\n' | ./bank)
 check "Your account number is 1001" "account 1001 created"
-if grep -Eq '^1001,Asha,[0-9a-f]{16},5000\.00$' data/accounts.txt 2>/dev/null; then
+if grep -Eq '^1001,Asha,[0-9a-f]{16},5000\.00,ACTIVE,0$' data/accounts.txt 2>/dev/null; then
     echo "PASS: account saved with a PIN hash"
 else
     echo "FAIL: account saved with a PIN hash"
@@ -60,6 +60,18 @@ echo
 echo "== a wrong PIN is refused =="
 OUT=$(printf '1\n1001\n0000\n0\n' | ./bank)
 check "Wrong PIN" "wrong PIN refused"
+
+echo
+echo "== 3 wrong PINs lock an account (S2-02) =="
+OUT=$(printf '2\nBob\n2000\n3456\n3456\n1\n1002\n0000\n1\n1002\n0000\n1\n1002\n0000\n1\n1002\n3456\n0\n' | ./bank)
+check "Account is LOCKED" "3 wrong PINs lock the account"
+check "Account is LOCKED. Contact the bank admin." "correct PIN refused while locked"
+if grep -Eq '^1002,Bob,[0-9a-f]{16},2000\.00,LOCKED,3$' data/accounts.txt 2>/dev/null; then
+    echo "PASS: the LOCKED status is saved"
+else
+    echo "FAIL: the LOCKED status is saved"
+    fail=1
+fi
 
 echo
 echo "== login and money operations =="
