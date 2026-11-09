@@ -32,6 +32,8 @@ int auth_valid_pin(const char *pin);                                /* 1 = exact
 /* return codes: 0 = ok, 1 = account not found, 2 = wrong PIN (counted),
    3 = account LOCKED, 4 = account CLOSED, 5 = could not save the failed attempt */
 int auth_login(struct account *list, int count, int acc_no, const char *pin, int *idx_out);
+int auth_change_pin(struct account *list, int count, int acc_no,
+                    const char *old_pin, const char *new_pin);
 /* returns the new account number, or:
    -1 bad name, -2 bad opening balance, -3 account list full, -4 save failed, -5 bad PIN */
 int acc_create(struct account *list, int *count, const char *name, double opening, const char *pin);
