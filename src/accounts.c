@@ -142,6 +142,48 @@ int acc_create(struct account *list, int *count, const char *name, double openin
     list[*count].bad_tries = 0;
     (*count)++;
 
+    static int auth_weak_pin(const char *pin)
+{
+    if (strcmp(pin, "0000") == 0 ||
+        strcmp(pin, "1111") == 0 ||
+        strcmp(pin, "2222") == 0 ||
+        strcmp(pin, "3333") == 0 ||
+        strcmp(pin, "4444") == 0 ||
+        strcmp(pin, "5555") == 0 ||
+        strcmp(pin, "6666") == 0 ||
+        strcmp(pin, "7777") == 0 ||
+        strcmp(pin, "8888") == 0 ||
+        strcmp(pin, "9999") == 0 ||
+        strcmp(pin, "1234") == 0 ||
+        strcmp(pin, "4321") == 0)
+        return 1;
+
+    return 0;
+}
+
+int auth_change_pin(struct account *list, int count, int acc_no,
+                    const char *old_pin, const char *new_pin)
+{
+    int idx = -1;
+    int rc;
+    char hash[HASH_LEN];
+
+    rc = auth_login(list, count, acc_no, old_pin, &idx);
+    if (rc != 0)
+        return rc;
+
+    if (!auth_valid_pin(new_pin) || auth_weak_pin(new_pin))
+        return 6;
+
+    auth_hash(new_pin, hash);
+    snprintf(list[idx].pin_hash, HASH_LEN, "%s", hash);
+
+    if (fs_save(list, count) != 0)
+        return 5;
+
+    return 0;
+}
+
     if (fs_save(list, *count) != 0)
         return -4;
     return new_no;
