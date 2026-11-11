@@ -145,6 +145,22 @@ else
 fi
 
 echo
+echo "== admin menu: list, total, unlock, close (S2-06) =="
+OUT=$(printf '2\nDave\n0\n5678\n5678\n0\n' | ./bank)
+check "Your account number is 1004" "zero-balance account 1004 created"
+OUT=$(printf '3\nwrongpass\n3\nadmin1234\n1\n2\n1001\n3\n1002\n4\n1004\n0\n0\n' | ./bank)
+check "Wrong admin password" "wrong admin password is refused"
+check "Total money in the bank: 217600.00" "admin list total matches the hand sum"
+check "Balance: 205600.00" "admin can show one account"
+check "Account 1002 unlocked" "locked account is unlocked"
+check "Account 1004 closed" "zero-balance account is closed"
+OUT=$(printf '1\n1002\n3456\n3\n0\n0\n' | ./bank)
+check "Login successful" "unlocked account can log in again"
+OUT=$(printf '1\n1004\n5678\n0\n' | ./bank)
+check "Account is CLOSED." "closed account cannot log in"
+secret_check "admin1234" "admin password is not stored in plain text"
+
+echo
 if [ "$fail" -eq 0 ]; then
     echo "ALL CHECKS PASSED"
 else

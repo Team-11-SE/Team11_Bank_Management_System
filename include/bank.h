@@ -33,6 +33,7 @@ int acc_find(const struct account *list, int count, int acc_no);
 int acc_next_number(const struct account *list, int count);
 int acc_valid_name(const char *name);
 int acc_valid_amount(double amount);
+int acc_valid_opening(double amount);
 
 void auth_hash(const char *text, char out[HASH_LEN]);
 int auth_valid_pin(const char *pin);
