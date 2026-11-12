@@ -159,6 +159,11 @@ check "Login successful" "unlocked account can log in again"
 OUT=$(printf '1\n1004\n5678\n0\n' | ./bank)
 check "Account is CLOSED." "closed account cannot log in"
 secret_check "admin1234" "admin password is not stored in plain text"
+OUT=$(printf '3\nadmin1234\n4\n1001\n0\n0\n' | ./bank)
+check "Only a zero balance can be closed." "non-zero balance account close is refused"
+file_check "^1001,Asha,.*,205600\.00,ACTIVE," data/accounts.txt "account 1001 remains active"
+OUT=$(printf '1\n1001\n7391\n3\n0\n0\n' | ./bank)
+check "Login successful" "account 1001 can still log in"
 
 echo
 if [ "$fail" -eq 0 ]; then
