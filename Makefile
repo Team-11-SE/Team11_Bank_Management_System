@@ -15,6 +15,6 @@ test: all
 	bash tests/smoke_test.sh
 
 clean:
-	rm -f $(TARGET) data/accounts.txt data/transactions.txt
+	rm -rf $(TARGET) data/accounts.txt data/transactions.txt data/accounts.tmp data/backup
 
 .PHONY: all run test clean

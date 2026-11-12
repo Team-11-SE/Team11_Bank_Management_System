@@ -109,6 +109,15 @@ OUT=$(printf '1\n1001\n4829\n3\n0\n0\n' | ./bank)
 check "Balance for account 1001 (Asha): 5500.00" "balance after restart"
 
 echo
+echo "== startup backup (S2-07) =="
+if ls data/backup/accounts_*.txt >/dev/null 2>&1 && ls data/backup/transactions_*.txt >/dev/null 2>&1; then
+    echo "PASS: timestamped backups exist"
+else
+    echo "FAIL: timestamped backups exist"
+    fail=1
+fi
+
+echo
 echo "== data files =="
 file_check "1001,Asha" data/accounts.txt "accounts.txt has the saved account"
 file_check "DEPOSIT,1500.00" data/transactions.txt "transactions.txt has the deposit"
@@ -164,6 +173,14 @@ check "Only a zero balance can be closed." "non-zero balance account close is re
 file_check "^1001,Asha,.*,205600\.00,ACTIVE," data/accounts.txt "account 1001 remains active"
 OUT=$(printf '1\n1001\n7391\n3\n0\n0\n' | ./bank)
 check "Login successful" "account 1001 can still log in"
+
+echo
+echo "== integrity check: damaged record (S2-07) =="
+printf 'garbage line\n' >> data/accounts.txt
+OUT=$(printf '0\n' | ./bank)
+check "Warning: data/accounts.txt line 5 is damaged and was skipped." \
+      "a damaged record is reported with its line number"
+check "Loaded 4 account(s)" "the good accounts still load"
 
 echo
 if [ "$fail" -eq 0 ]; then

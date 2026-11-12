@@ -470,8 +470,12 @@ static int admin_login(void)
 void menu_run(void)
 {
     static struct account list[MAX_ACCOUNTS];
-    int count = fs_load(list, MAX_ACCOUNTS);
+    int count;
     int choice;
+
+    fs_startup_backup();
+    count = fs_load(list, MAX_ACCOUNTS);
+    fs_check_transactions();
 
     printf("Loaded %d account(s) from data/accounts.txt.\n\n", count);
 
