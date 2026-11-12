@@ -8,6 +8,9 @@
 #include <unistd.h>
 #include "bank.h"
 
+/* Hash of the admin password "admin1234"; the plain password is never stored. */
+#define ADMIN_HASH "c2109c4aa23d0ff6"
+
 /* Reads a whole number. Returns 0 when the input ends (so the menu exits). */
 static int read_int(const char *prompt)
 {
@@ -45,6 +48,26 @@ static double read_amount(const char *prompt)
         if (end != line && *end == '\0' && acc_valid_amount(value))
             return value;
         printf("Invalid amount. Enter a number greater than 0 and below Rs. 10000000.00 with at most 2 decimals.\n");
+    }
+}
+
+/* Reads an opening balance: 0 is allowed for a new account (BMS-F-019). */
+static double read_opening(const char *prompt)
+{
+    char line[LINE_LEN];
+    char *end;
+    double value;
+
+    for (;;) {
+        printf("%s", prompt);
+        if (fgets(line, sizeof line, stdin) == NULL)
+            return -1.0;
+        value = strtod(line, &end);
+        while (isspace((unsigned char)*end))
+            end++;
+        if (end != line && *end == '\0' && acc_valid_opening(value))
+            return value;
+        printf("Invalid opening balance. Enter 0 or more (below Rs. 10000000.00) with at most 2 decimals.\n");
     }
 }
 
@@ -108,6 +131,7 @@ static void show_main_menu(void)
 {
     printf("1. Customer login\n");
     printf("2. Create account\n");
+    printf("3. Admin login\n");
     printf("0. Exit\n");
 }
 
@@ -166,7 +190,7 @@ static void create_account_flow(struct account *list, int *count)
     read_name("Name: ", name, NAME_LEN);
     if (name[0] == '\0')
         return;                         /* EOF: do not hang in the PIN loop */
-    opening = read_amount("Opening balance: ");
+    opening = read_opening("Opening balance: ");
     if (opening < 0.0)
         return;                         /* EOF */
 
@@ -313,6 +337,136 @@ static void customer_session(struct account *list, int count, int idx)
     }
 }
 
+static void show_admin_menu(void)
+{
+    printf("1. List all accounts and total money\n");
+    printf("2. Show one account\n");
+    printf("3. Unlock a locked account\n");
+    printf("4. Close a zero-balance account\n");
+    printf("0. Exit admin\n");
+}
+
+static void admin_list(struct account *list, int count)
+{
+    double total = 0.0;
+    int i;
+
+    printf("--- All accounts ---\n");
+    for (i = 0; i < count; i++) {
+        printf("%d | %s | %s | %.2f\n", list[i].acc_no, list[i].name,
+               list[i].status, list[i].balance);
+        total += list[i].balance;
+    }
+    printf("Total money in the bank: %.2f\n", total);
+}
+
+static void admin_show(struct account *list, int count)
+{
+    int acc_no = read_int("Account number: ");
+    int idx = acc_find(list, count, acc_no);
+
+    if (idx < 0) {
+        printf("Account %d not found.\n", acc_no);
+        return;
+    }
+    printf("Number: %d\n", list[idx].acc_no);
+    printf("Name: %s\n", list[idx].name);
+    printf("Status: %s\n", list[idx].status);
+    printf("Balance: %.2f\n", list[idx].balance);
+}
+
+static void admin_unlock(struct account *list, int count)
+{
+    int acc_no = read_int("Account number: ");
+    int idx = acc_find(list, count, acc_no);
+
+    if (idx < 0) {
+        printf("Account %d not found.\n", acc_no);
+        return;
+    }
+    if (strcmp(list[idx].status, "LOCKED") != 0) {
+        printf("Account %d is %s, not LOCKED.\n", acc_no, list[idx].status);
+        return;
+    }
+    snprintf(list[idx].status, STATUS_LEN, "ACTIVE");
+    list[idx].bad_tries = 0;
+    if (fs_save(list, count) != 0) {
+        printf("Could not save the unlock.\n");
+        return;
+    }
+    printf("Account %d unlocked.\n", acc_no);
+}
+
+static void admin_close(struct account *list, int count)
+{
+    int acc_no = read_int("Account number: ");
+    int idx = acc_find(list, count, acc_no);
+
+    if (idx < 0) {
+        printf("Account %d not found.\n", acc_no);
+        return;
+    }
+    if (strcmp(list[idx].status, "CLOSED") == 0) {
+        printf("Account %d is already CLOSED.\n", acc_no);
+        return;
+    }
+    if (list[idx].balance != 0.0) {
+        printf("Account %d has a balance of %.2f. Only a zero balance can be closed.\n",
+               acc_no, list[idx].balance);
+        return;
+    }
+    snprintf(list[idx].status, STATUS_LEN, "CLOSED");
+    if (fs_save(list, count) != 0) {
+        printf("Could not save the closure.\n");
+        return;
+    }
+    printf("Account %d closed.\n", acc_no);
+}
+
+/* Admin session: opened only by the admin password (PRJ-SR-006). */
+static void admin_session(struct account *list, int count)
+{
+    int choice;
+
+    for (;;) {
+        show_admin_menu();
+        choice = read_int("Enter choice: ");
+        printf("\n");
+
+        if (choice == 0) {
+            printf("Admin session closed.\n\n");
+            return;
+        } else if (choice == 1) {
+            admin_list(list, count);
+        } else if (choice == 2) {
+            admin_show(list, count);
+        } else if (choice == 3) {
+            admin_unlock(list, count);
+        } else if (choice == 4) {
+            admin_close(list, count);
+        } else {
+            printf("Unknown option. Please choose between 0 and 4.\n");
+        }
+        printf("\n");
+    }
+}
+
+/* Returns 1 after a correct admin password. */
+static int admin_login(void)
+{
+    char password[64];
+    char hash[HASH_LEN];
+
+    read_pin("Admin password: ", password, sizeof password);
+    auth_hash(password, hash);
+    if (strcmp(hash, ADMIN_HASH) != 0) {
+        printf("Wrong admin password.\n\n");
+        return 0;
+    }
+    printf("Admin login successful.\n\n");
+    return 1;
+}
+
 void menu_run(void)
 {
     static struct account list[MAX_ACCOUNTS];
@@ -335,8 +489,11 @@ void menu_run(void)
                 customer_session(list, count, idx);
         } else if (choice == 2) {
             create_account_flow(list, &count);
+        } else if (choice == 3) {
+            if (admin_login())
+                admin_session(list, count);
         } else {
-            printf("Unknown option. Please choose between 0 and 2.\n");
+            printf("Unknown option. Please choose between 0 and 3.\n");
         }
         printf("\n");
     }

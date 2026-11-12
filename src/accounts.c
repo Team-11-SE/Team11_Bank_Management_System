@@ -66,6 +66,13 @@ int acc_valid_amount(double amount)
     return diff < 0.000001 && diff > -0.000001;
 }
 
+int acc_valid_opening(double amount)
+{
+    if (amount == 0.0)
+        return 1;
+    return acc_valid_amount(amount);
+}
+
 /* FNV-1a: only the hash is stored. */
 void auth_hash(const char *text, char out[HASH_LEN])
 {
