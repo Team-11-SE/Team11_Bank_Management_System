@@ -3,4 +3,5 @@ bank
 data/accounts.txt
 data/transactions.txt
 data/backup/
+data/*.tmp
 .DS_Store

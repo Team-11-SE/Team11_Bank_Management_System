@@ -109,6 +109,15 @@ OUT=$(printf '1\n1001\n4829\n3\n0\n0\n' | ./bank)
 check "Balance for account 1001 (Asha): 5500.00" "balance after restart"
 
 echo
+echo "== atomic write (S2-08) =="
+if [ ! -f data/accounts.tmp ]; then
+    echo "PASS: no temporary file is left after saves"
+else
+    echo "FAIL: no temporary file is left after saves"
+    fail=1
+fi
+
+echo
 echo "== startup backup (S2-07) =="
 if ls data/backup/accounts_*.txt >/dev/null 2>&1 && ls data/backup/transactions_*.txt >/dev/null 2>&1; then
     echo "PASS: timestamped backups exist"
