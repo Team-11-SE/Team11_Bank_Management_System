@@ -12,6 +12,7 @@
 #define DAILY_WITHDRAW_LIMIT 50000.00
 #define DEPOSIT_LIMIT 200000.00
 #define AMOUNT_CEILING 10000000.00
+#define MAX_BACKUPS 10
 
 struct account {
     int acc_no;
@@ -27,6 +28,8 @@ int fs_load(struct account *list, int max);
 int fs_save(const struct account *list, int count);
 int fs_log_txn(int acc_no, const char *type, double amount,
                double balance_after);
+void fs_startup_backup(void);
+void fs_check_transactions(void);
 
 /* ---- accounts.c ---- */
 int acc_find(const struct account *list, int count, int acc_no);
