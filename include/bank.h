@@ -68,6 +68,8 @@ int txn_withdraw(struct account *list, int count, int acc_no, double amount);
 void txn_balance(const struct account *list, int count, int acc_no);
 void txn_print_last(int acc_no, int last_n);
 double txn_withdrawn_today(int acc_no);
+int txn_date_valid(const char *date);
+void txn_print_range(int acc_no, const char *from, const char *to);
 
 /* ---- ui_menu.c ---- */
 void menu_run(void);
