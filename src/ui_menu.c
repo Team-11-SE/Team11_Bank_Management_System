@@ -51,6 +51,30 @@ static double read_amount(const char *prompt)
     }
 }
 
+/* Reads a date in YYYY-MM-DD form. */
+static void read_date(const char *prompt, char *out, int size)
+{
+    char line[LINE_LEN];
+    size_t len;
+
+    for (;;) {
+        printf("%s", prompt);
+        if (fgets(line, sizeof line, stdin) == NULL) {
+            out[0] = '\0';
+            return;
+        }
+        len = strlen(line);
+        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r'))
+            line[--len] = '\0';
+        if (txn_date_valid(line)) {
+            snprintf(out, (size_t)size, "%s", line);
+            return;
+        }
+        printf("Invalid date. Use YYYY-MM-DD.\n");
+    }
+}
+
+
 /* Reads an opening balance: 0 is allowed for a new account (BMS-F-019). */
 static double read_opening(const char *prompt)
 {
@@ -142,6 +166,7 @@ static void show_customer_menu(void)
     printf("3. Balance inquiry\n");
     printf("4. Mini statement (last 10 transactions)\n");
     printf("5. Change PIN\n");
+    printf("6. Statement between two dates\n");
     printf("0. Logout\n");
 }
 
@@ -330,8 +355,15 @@ static void customer_session(struct account *list, int count, int idx)
             txn_print_last(acc_no, 10);
         } else if (choice == 5) {
             change_pin_flow(list, count, idx);
+            } else if (choice == 6) {
+    char from[16];
+    char to[16];
+
+    read_date("From date (YYYY-MM-DD): ", from, sizeof from);
+    read_date("To date (YYYY-MM-DD): ", to, sizeof to);
+    txn_print_range(acc_no, from, to);
         } else {
-            printf("Unknown option. Please choose between 0 and 5.\n");
+            printf("Unknown option. Please choose between 0 and 6.\n");
         }
         printf("\n");
     }
