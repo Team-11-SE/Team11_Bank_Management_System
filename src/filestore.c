@@ -8,6 +8,7 @@
 #include "bank.h"
 
 #define ACC_FILE "data/accounts.txt"
+#define ACC_TMP  "data/accounts.tmp"
 #define TXN_FILE "data/transactions.txt"
 #define BACKUP_DIR "data/backup"
 #define PATH_LEN 512
@@ -151,18 +152,38 @@ int fs_load(struct account *list, int max)
     return count;
 }
 
+/* Atomic write: build data/accounts.tmp, then rename it over accounts.txt
+   (PRJ-SR-003, BMS-NF-005). A crash leaves either the old file or the new
+   file, never a half-written one. */
 int fs_save(const struct account *list, int count)
 {
-    FILE *fp = fopen(ACC_FILE, "w");
+    FILE *fp = fopen(ACC_TMP, "w");
     int i;
 
     if (fp == NULL)
         return 1;
-    for (i = 0; i < count; i++)
-        fprintf(fp, "%d,%s,%s,%.2f,%s,%d\n", list[i].acc_no, list[i].name,
-                list[i].pin_hash, list[i].balance, list[i].status,
-                list[i].bad_tries);
-    fclose(fp);
+    for (i = 0; i < count; i++) {
+        if (fprintf(fp, "%d,%s,%s,%.2f,%s,%d\n", list[i].acc_no, list[i].name,
+                    list[i].pin_hash, list[i].balance, list[i].status,
+                    list[i].bad_tries) < 0) {
+            fclose(fp);
+            remove(ACC_TMP);
+            return 1;
+        }
+    }
+    if (fflush(fp) != 0) {
+        fclose(fp);
+        remove(ACC_TMP);
+        return 1;
+    }
+    if (fclose(fp) != 0) {
+        remove(ACC_TMP);
+        return 1;
+    }
+    if (rename(ACC_TMP, ACC_FILE) != 0) {
+        remove(ACC_TMP);
+        return 1;
+    }
     return 0;
 }
 
@@ -174,7 +195,7 @@ int fs_log_txn(int acc_no, const char *type, double amount, double balance_after
     struct tm *tm_info;
     int id = 1;
 
-    /* transaction id = number of lines already in the log + 1 */
+    /* append-only log: existing lines are never edited or deleted (PRJ-SR-004) */
     fp = fopen(TXN_FILE, "r");
     if (fp != NULL) {
         int ch;
