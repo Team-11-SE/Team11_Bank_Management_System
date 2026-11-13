@@ -5,7 +5,7 @@ int main(void)
 {
     printf("=====================================\n");
     printf("  Team 11 Bank Management System\n");
-    printf("  Sprint 1 - basic account features\n");
+    printf("  Sprint 2 - login, limits and admin\n");
     printf("=====================================\n\n");
 
     menu_run();

@@ -2,7 +2,7 @@
 #ifndef BANK_H
 #define BANK_H
 
-#define MAX_ACCOUNTS 100
+#define MAX_ACCOUNTS 10000
 #define NAME_LEN 64
 #define LINE_LEN 256
 #define PIN_LEN 5
