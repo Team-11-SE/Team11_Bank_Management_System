@@ -14,7 +14,10 @@ run: all
 test: all
 	bash tests/smoke_test.sh
 
+perf: all
+	python3 tests/perf_test.py
+
 clean:
 	rm -rf $(TARGET) data/accounts.txt data/transactions.txt data/accounts.tmp data/backup
 
-.PHONY: all run test clean
+.PHONY: all run test perf clean
