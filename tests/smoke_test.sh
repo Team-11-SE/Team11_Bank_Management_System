@@ -184,6 +184,17 @@ OUT=$(printf '1\n1001\n7391\n3\n0\n0\n' | ./bank)
 check "Login successful" "account 1001 can still log in"
 
 echo
+echo "== statement between two dates (S2-09) =="
+TODAY=$(date +%Y-%m-%d)
+OUT=$(printf '1\n1001\n7391\n6\n%s\n%s\n0\n0\n' "$TODAY" "$TODAY" | ./bank)
+check "4 transaction(s) in this period." "today's statement has the 4 transactions"
+check "DEPOSIT,200000.00" "the statement shows the large deposit"
+
+OUT=$(printf '1\n1001\n7391\n6\n2020-01-01\n2020-01-02\n0\n0\n' | ./bank)
+check "No transactions in this period" "an empty range prints the empty message"
+
+
+echo
 echo "== integrity check: damaged record (S2-07) =="
 printf 'garbage line\n' >> data/accounts.txt
 OUT=$(printf '0\n' | ./bank)
