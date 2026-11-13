@@ -141,3 +141,58 @@ double txn_withdrawn_today(int acc_no)
     fclose(fp);
     return sum;
 }
+
+int txn_date_valid(const char *date)
+{
+    int y;
+    int m;
+    int d;
+    char extra;
+
+    if (strlen(date) != 10)
+        return 0;
+    if (sscanf(date, "%4d-%2d-%2d%c", &y, &m, &d, &extra) != 3)
+        return 0;
+    if (y < 2000 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31)
+        return 0;
+    return 1;
+}
+
+void txn_print_range(int acc_no, const char *from, const char *to)
+{
+    FILE *fp = fopen("data/transactions.txt", "r");
+    char line[LINE_LEN];
+    int count = 0;
+
+    if (fp == NULL) {
+        printf("No transactions in this period\n");
+        return;
+    }
+
+    printf("--- Statement for account %d from %s to %s ---\n", acc_no, from, to);
+    while (fgets(line, sizeof line, fp) != NULL) {
+        int id;
+        int acc;
+        char type[16];
+        double amount;
+        double balance;
+        char when[32];
+
+        if (sscanf(line, "%d,%d,%15[^,],%lf,%lf,%31[^\n]",
+                   &id, &acc, type, &amount, &balance, when) == 6
+            && acc == acc_no
+            && strncmp(when, from, 10) >= 0
+            && strncmp(when, to, 10) <= 0) {
+            line[strcspn(line, "\n")] = '\0';
+            printf("%s\n", line);
+            count++;
+        }
+    }
+    fclose(fp);
+
+    if (count == 0)
+        printf("No transactions in this period\n");
+    else
+        printf("%d transaction(s) in this period.\n", count);
+}
+
